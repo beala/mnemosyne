@@ -1,0 +1,13 @@
+# Extraction
+
+- [x] Capture display name.
+- [ ] Capture that it contained an image.
+- [ ] Support multiple accounts.
+- [ ] Capture if it was a reply.
+- [ ] Capture person who quote tweeted.
+- [ ] Save image in tweet.
+
+# Query
+- [ ] Time range query.
+- [ ] Full text search.
+- [ ] Search by user.

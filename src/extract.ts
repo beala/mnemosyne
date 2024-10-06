@@ -2,6 +2,7 @@ export type Tweet = {
     id: string;
     text: string;
     author: string;
+    displayName: string;
     qt: QuotedTweet | null;
     datetime: string;
 }
@@ -10,14 +11,20 @@ export type Tweet = {
 export type QuotedTweet = {
     text: string;
     author: string;
+    displayName: string;
     datetime: string;
 }
 
 export function extractTweet(tweetElement: Element): Tweet {
     let tweetId: string = "";
     let tweetAuthor: string = "";
+    let displayName: string = "";
 
-    const tweetTexts: NodeListOf<Element> = tweetElement.querySelectorAll('[data-testid="tweetText"]')
+    const tweetTextElements: NodeListOf<Element> = tweetElement.querySelectorAll('[data-testid="tweetText"]')
+    let mainTweetText: string = "";
+    if (tweetTextElements.length > 0) {
+        mainTweetText = tweetTextElements[0].textContent?.trim() || "";
+    }
 
     const userNameElements: NodeListOf<Element> = tweetElement.querySelectorAll('[data-testid="User-Name"]');
     if (userNameElements.length > 0) {
@@ -29,24 +36,31 @@ export function extractTweet(tweetElement: Element): Tweet {
             tweetId = parts[parts.length - 1] || "";
             tweetAuthor = username ? `${username}` : "";
         }
+
+        const anchorElement: HTMLAnchorElement | null = userNameElements[0].querySelector('a');
+        if (anchorElement) {
+            displayName = anchorElement.textContent?.trim() || "";
+        }
     }
 
     const postedDateTimes: string[] = Array.from(tweetElement.querySelectorAll('time')).map(e => e.getAttribute('datetime') || "");
 
     // This should probably use innerText, but that's not supported in JSDOM and breaks the tests.
     let qtTweet: QuotedTweet | null = null;
-    if (tweetTexts.length > 1) {
+    if (tweetTextElements.length > 1) {
         qtTweet = {
-            text: tweetTexts[1].textContent?.trim() || "",
+            text: tweetTextElements[1].textContent?.trim() || "",
             author: userNameElements[1].textContent?.trim().split('·')[0].split('@')[1] || "",
+            displayName: userNameElements[1].querySelector('div[dir="ltr"]')?.textContent?.trim() || "",
             datetime: postedDateTimes[1]
         }
     }
 
     return {
         id: tweetId,
-        text: tweetTexts[0].textContent?.trim() || "",
+        text: mainTweetText,
         author: tweetAuthor,
+        displayName: displayName,
         qt: qtTweet,
         datetime: postedDateTimes[0]
     }

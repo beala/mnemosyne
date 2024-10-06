@@ -14,6 +14,7 @@ test('extracts tweet from basic tweet', () => {
     expect(tweet.id).toEqual('1841842569182929401');
     expect(tweet.text).toEqual("I gotta get my act together you guys");
     expect(tweet.author).toEqual('jarvis_best');
+    expect(tweet.displayName).toEqual('Jarvis');
     expect(tweet.datetime).toEqual("2024-10-03T14:07:42.000Z");
     expect(tweet.qt).toBeNull();
 });
@@ -27,6 +28,7 @@ test('extracts tweet from qt tweet', () => {
     expect(tweet.id).toEqual('1841911481241370703');
     expect(tweet.text).toEqual("i legitimately cannot imagine why, as a highly intelligent young korean or chinese person, u would not try to move to the united states to start ur career and life");
     expect(tweet.author).toEqual('tenobrus');
+    expect(tweet.displayName).toEqual('Tenobrus');
     expect(tweet.datetime).toEqual("2024-10-03T18:41:32.000Z");
 
     expect(tweet.qt?.text).toEqual(
@@ -40,4 +42,5 @@ test('extracts tweet from qt tweet', () => {
     );
     expect(tweet.qt?.author).toEqual("cedar_xr");
     expect(tweet.qt?.datetime).toEqual("2024-10-03T18:38:33.000Z");
+    expect(tweet.qt?.displayName).toEqual("Cedar is");
 });

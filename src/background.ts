@@ -1,6 +1,5 @@
 import { Tweet } from './extract';
 
-// Open (or create) the IndexedDB database
 let db: IDBDatabase;
 const dbName = 'TweetDatabase';
 const dbVersion = 1;
@@ -22,7 +21,6 @@ request.onupgradeneeded = (event) => {
   console.log("Object store created");
 };
 
-// Function to save tweet to IndexedDB
 function saveTweetToIndexedDB(tweet: Tweet) {
   const transaction = db.transaction(["tweets"], "readwrite");
   const objectStore = transaction.objectStore("tweets");
@@ -41,6 +39,10 @@ chrome.runtime.onMessage.addListener((request: any, sender: chrome.runtime.Messa
   if (request.action === 'saveTweet') {
     const tweet = request.tweet as Tweet;
     console.log(`Viewed tweet:\n${JSON.stringify(tweet, null, 2)}`);
-    saveTweetToIndexedDB(tweet);
+    if(tweet.id.trim().length > 0) {
+      saveTweetToIndexedDB(tweet);
+    } else {
+      console.log("Tweet has no ID. Probably an ad. Skipping save.");
+    }
   }
 });

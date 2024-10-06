@@ -8,7 +8,15 @@ type SaveTweetAction = {
 }
 
 function saveTweet(tweetElement: Element): void {
-  const tweet = extractTweet(tweetElement);
+  let tweet: Tweet;
+  try {
+    tweet = extractTweet(tweetElement);
+  } catch (error) {
+    console.error("Error extracting tweet:", error);
+    console.error("TweetElement:", JSON.stringify(tweetElement.outerHTML, null, 2));
+    return;
+  }
+  
   const action: BackgroundAction = {
     action: 'saveTweet',
     tweet: tweet
