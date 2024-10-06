@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "TweetMem",
+  "description": "Remember which tweets you've read.",
+  "version": "1.0",
+  "options_ui": {
+    "page": "options.html"
+  },
+  "action": {
+    "default_icon": "icon.png",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://x.com/*"
+      ],
+      "js": [
+        "js/vendor.js",
+        "js/content_script.js"
+      ]
+    }
+  ],
+  "background": {
+    "service_worker": "js/background.js"
+  },
+  "permissions": [
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://x.com/*"
+  ]
+}
