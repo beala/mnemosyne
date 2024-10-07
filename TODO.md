@@ -1,7 +1,7 @@
 # Extraction
 
 - [x] Capture display name.
-- [ ] Capture that it contained an image.
+- [x] Capture that it contained an image.
 - [ ] Support multiple accounts.
 - [ ] Capture if it was a reply.
 - [ ] Capture person who quote tweeted.
