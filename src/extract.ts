@@ -5,6 +5,7 @@ export type Tweet = {
     displayName: string;
     qt: QuotedTweet | null;
     datetime: string;
+    imageUrls: string[];
 }
 
 // quoted tweets contain less information when scraped from the web UI
@@ -13,6 +14,7 @@ export type QuotedTweet = {
     author: string;
     displayName: string;
     datetime: string;
+    imageUrls: string[];
 }
 
 export function extractTweet(tweetElement: Element): Tweet {
@@ -24,6 +26,8 @@ export function extractTweet(tweetElement: Element): Tweet {
     let mainTweetText: string = "";
     if (tweetTextElements.length > 0) {
         mainTweetText = tweetTextElements[0].textContent?.trim() || "";
+    } else {
+        console.error("ERROR: No Tweet-Text element found.", tweetElement.outerHTML);
     }
 
     const userNameElements: NodeListOf<Element> = tweetElement.querySelectorAll('[data-testid="User-Name"]');
@@ -41,9 +45,15 @@ export function extractTweet(tweetElement: Element): Tweet {
         if (anchorElement) {
             displayName = anchorElement.textContent?.trim() || "";
         }
+    } else {
+        console.error("ERROR: No User-Name element found.", tweetElement.outerHTML);
     }
 
     const postedDateTimes: string[] = Array.from(tweetElement.querySelectorAll('time')).map(e => e.getAttribute('datetime') || "");
+
+    const photoLinks: string[] = Array.from(tweetElement.querySelectorAll('a[href*="/photo/"]')).map(e => e.getAttribute('href') || "");
+
+    const mainTweetPhotoLinks: string[] = photoLinks.filter(e => e.includes(tweetId));
 
     // This should probably use innerText, but that's not supported in JSDOM and breaks the tests.
     let qtTweet: QuotedTweet | null = null;
@@ -52,7 +62,8 @@ export function extractTweet(tweetElement: Element): Tweet {
             text: tweetTextElements[1].textContent?.trim() || "",
             author: userNameElements[1].textContent?.trim().split('·')[0].split('@')[1] || "",
             displayName: userNameElements[1].querySelector('div[dir="ltr"]')?.textContent?.trim() || "",
-            datetime: postedDateTimes[1]
+            datetime: postedDateTimes[1],
+            imageUrls: photoLinks.filter(e => !e.includes(tweetId))
         }
     }
 
@@ -62,6 +73,7 @@ export function extractTweet(tweetElement: Element): Tweet {
         author: tweetAuthor,
         displayName: displayName,
         qt: qtTweet,
-        datetime: postedDateTimes[0]
+        datetime: postedDateTimes[0],
+        imageUrls: mainTweetPhotoLinks
     }
 }

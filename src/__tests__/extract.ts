@@ -44,3 +44,14 @@ test('extracts tweet from qt tweet', () => {
     expect(tweet.qt?.datetime).toEqual("2024-10-03T18:38:33.000Z");
     expect(tweet.qt?.displayName).toEqual("Cedar is");
 });
+
+test('extracts tweet from image only tweet', () => {
+    const htmlContent = fs.readFileSync(path.join(dataDir, 'tweet_with_image.html'), 'utf-8');
+    const dom = new JSDOM(htmlContent);
+    const tweet = extractTweet(dom.window.document.body);
+
+    expect(tweet).toBeDefined();
+    expect(tweet.id).toEqual("1841834132160077852");
+    expect(tweet.text).toEqual("More like sky-DYING instructor am I right (am I?)");
+    expect(tweet.imageUrls).toEqual(["/thechosenberg/status/1841834132160077852/photo/1"]);
+});
