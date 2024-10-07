@@ -25,13 +25,25 @@ function saveTweetToIndexedDB(tweet: Tweet) {
   const transaction = db.transaction(["tweets"], "readwrite");
   const objectStore = transaction.objectStore("tweets");
   const request = objectStore.put(tweet);
+  request.onsuccess = (event) => {
+    console.log("Tweet saved to IndexedDB successfully");
+  };
 
   request.onerror = (event) => {
     console.error("Error saving tweet to IndexedDB:", event);
   };
 
-  request.onsuccess = (event) => {
-    console.log("Tweet saved to IndexedDB successfully");
+  // Count the number of tweets in the database
+  const countTransaction = db.transaction(["tweets"], "readonly");
+  const countObjectStore = countTransaction.objectStore("tweets");
+  const countRequest = countObjectStore.count();
+  
+  countRequest.onsuccess = () => {
+    console.log(`Total number of tweets in the database: ${countRequest.result}`);
+  };
+  
+  countRequest.onerror = (event) => {
+    console.error("Error counting tweets:", event);
   };
 }
 
