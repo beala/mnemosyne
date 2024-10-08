@@ -8,6 +8,9 @@
 - [ ] Save image in tweet.
 
 # Query
-- [ ] Time range query.
+- [x] Time range query.
 - [ ] Full text search.
 - [ ] Search by user.
+
+# UI
+- [ ] Query page.

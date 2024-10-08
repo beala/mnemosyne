@@ -4,7 +4,7 @@ export type Tweet = {
     author: string;
     displayName: string;
     qt: QuotedTweet | null;
-    datetime: string;
+    datetime: Date;
     imageUrls: string[];
 }
 
@@ -13,7 +13,7 @@ export type QuotedTweet = {
     text: string;
     author: string;
     displayName: string;
-    datetime: string;
+    datetime: Date;
     imageUrls: string[];
 }
 
@@ -27,7 +27,7 @@ export function extractTweet(tweetElement: Element): Tweet {
     if (tweetTextElements.length > 0) {
         mainTweetText = tweetTextElements[0].textContent?.trim() || "";
     } else {
-        console.error("ERROR: No Tweet-Text element found.", tweetElement.outerHTML);
+        console.error("ERROR: No Tweet-Text element found." /*, tweetElement.outerHTML*/);
     }
 
     const userNameElements: NodeListOf<Element> = tweetElement.querySelectorAll('[data-testid="User-Name"]');
@@ -62,7 +62,7 @@ export function extractTweet(tweetElement: Element): Tweet {
             text: tweetTextElements[1].textContent?.trim() || "",
             author: userNameElements[1].textContent?.trim().split('·')[0].split('@')[1] || "",
             displayName: userNameElements[1].querySelector('div[dir="ltr"]')?.textContent?.trim() || "",
-            datetime: postedDateTimes[1],
+            datetime: new Date(postedDateTimes[1]),
             imageUrls: photoLinks.filter(e => !e.includes(tweetId))
         }
     }
@@ -73,7 +73,7 @@ export function extractTweet(tweetElement: Element): Tweet {
         author: tweetAuthor,
         displayName: displayName,
         qt: qtTweet,
-        datetime: postedDateTimes[0],
+        datetime: new Date(postedDateTimes[0]),
         imageUrls: mainTweetPhotoLinks
     }
 }

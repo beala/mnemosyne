@@ -9,6 +9,7 @@ module.exports = {
         options: path.join(srcDir, 'options.tsx'),
         background: path.join(srcDir, 'background.ts'),
         content_script: path.join(srcDir, 'content_script.ts'),
+        query: path.join(srcDir, 'query.tsx'),
     },
     output: {
         path: path.join(__dirname, "../dist/js"),
@@ -28,6 +29,14 @@ module.exports = {
                 test: /\.tsx?$/,
                 use: "ts-loader",
                 exclude: /node_modules/,
+            },
+            {
+                test: /\.css$/,
+                use: [
+                    'style-loader',
+                    'css-loader',
+                    'postcss-loader',
+                ],
             },
         ],
     },
