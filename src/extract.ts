@@ -4,8 +4,9 @@ export type Tweet = {
     author: string;
     displayName: string;
     qt: QuotedTweet | null;
-    datetime: Date;
+    datetime: string;
     imageUrls: string[];
+    cardUrl: string;
 }
 
 // quoted tweets contain less information when scraped from the web UI
@@ -13,7 +14,7 @@ export type QuotedTweet = {
     text: string;
     author: string;
     displayName: string;
-    datetime: Date;
+    datetime: string;
     imageUrls: string[];
 }
 
@@ -26,8 +27,12 @@ export function extractTweet(tweetElement: Element): Tweet {
     let mainTweetText: string = "";
     if (tweetTextElements.length > 0) {
         mainTweetText = tweetTextElements[0].textContent?.trim() || "";
-    } else {
-        console.error("ERROR: No Tweet-Text element found." /*, tweetElement.outerHTML*/);
+    }
+
+    let cardUrl: string = "";
+    const cardElements: NodeListOf<Element> = tweetElement.querySelectorAll('[data-testid="card.wrapper"]');
+    if (cardElements.length > 0) {
+        cardUrl = cardElements[0].querySelector('a')?.getAttribute('href') || "";
     }
 
     const userNameElements: NodeListOf<Element> = tweetElement.querySelectorAll('[data-testid="User-Name"]');
@@ -50,6 +55,14 @@ export function extractTweet(tweetElement: Element): Tweet {
     }
 
     const postedDateTimes: string[] = Array.from(tweetElement.querySelectorAll('time')).map(e => e.getAttribute('datetime') || "");
+    let mainPostedDateTime: string = "";
+    let qtPostedDateTime: string = "";  
+    if (postedDateTimes.length > 0) {
+        mainPostedDateTime = new Date(postedDateTimes[0]).toISOString();
+    }
+    if (postedDateTimes.length > 1) {
+        qtPostedDateTime = new Date(postedDateTimes[1]).toISOString();
+    }
 
     const photoLinks: string[] = Array.from(tweetElement.querySelectorAll('a[href*="/photo/"]')).map(e => e.getAttribute('href') || "");
 
@@ -62,7 +75,7 @@ export function extractTweet(tweetElement: Element): Tweet {
             text: tweetTextElements[1].textContent?.trim() || "",
             author: userNameElements[1].textContent?.trim().split('·')[0].split('@')[1] || "",
             displayName: userNameElements[1].querySelector('div[dir="ltr"]')?.textContent?.trim() || "",
-            datetime: new Date(postedDateTimes[1]),
+            datetime: qtPostedDateTime,
             imageUrls: photoLinks.filter(e => !e.includes(tweetId))
         }
     }
@@ -73,7 +86,8 @@ export function extractTweet(tweetElement: Element): Tweet {
         author: tweetAuthor,
         displayName: displayName,
         qt: qtTweet,
-        datetime: new Date(postedDateTimes[0]),
-        imageUrls: mainTweetPhotoLinks
+        datetime: mainPostedDateTime,
+        imageUrls: mainTweetPhotoLinks,
+        cardUrl: cardUrl
     }
 }

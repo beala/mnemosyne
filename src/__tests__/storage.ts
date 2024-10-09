@@ -15,12 +15,14 @@ it("should save and retrieve a tweet from the database", async () => {
         author: "Test Author",
         displayName: "Test Display Name",
         qt: null,
-        datetime: new Date(),
+        datetime: new Date().toISOString(),
         imageUrls: ["Test Image URL"],
+        cardUrl: "Test Card URL"
     };
 
-    await saveTweetToIndexedDB(db, tweet, new Date());
+    const viewDate = new Date();
+    await saveTweetToIndexedDB(db, tweet, viewDate);
 
     const retrievedTweet = await getViewsInRange(db, new Date(0), new Date());
-    expect(retrievedTweet).toEqual([tweet]);
+    expect(retrievedTweet).toEqual([[viewDate, tweet]]);
 });

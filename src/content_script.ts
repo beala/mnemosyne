@@ -7,7 +7,6 @@ type SaveTweetAction = {
   tweet: Tweet
 }
 
-// Create an Intersection Observer
 const observer = new IntersectionObserver((entries) => {
   entries.forEach((entry) => {
     if (entry.isIntersecting) {
@@ -18,8 +17,8 @@ const observer = new IntersectionObserver((entries) => {
     }
   });
 }, {
-  root: null, // Use the viewport as the root
-  threshold: 0.5 // Trigger when 50% of the tweet is visible
+  root: null,
+  threshold: 0.5
 });
 
 function saveTweet(tweetElement: Element): void {
