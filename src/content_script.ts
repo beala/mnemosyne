@@ -7,6 +7,21 @@ type SaveTweetAction = {
   tweet: Tweet
 }
 
+// Create an Intersection Observer
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach((entry) => {
+    if (entry.isIntersecting) {
+      const tweetElement = entry.target as Element;
+      saveTweet(tweetElement);
+      // Unobserve the tweet after saving it
+      observer.unobserve(tweetElement);
+    }
+  });
+}, {
+  root: null, // Use the viewport as the root
+  threshold: 0.5 // Trigger when 50% of the tweet is visible
+});
+
 function saveTweet(tweetElement: Element): void {
   let tweet: Tweet;
   try {
@@ -27,7 +42,7 @@ function saveTweet(tweetElement: Element): void {
 
 function observeTweets(): void {
   console.log('Starting tweet observer');
-  const observer = new MutationObserver((mutations: MutationRecord[]) => {
+  const mutationObserver = new MutationObserver((mutations: MutationRecord[]) => {
     mutations.forEach((mutation: MutationRecord) => {
       if (mutation.type === 'childList') {
         mutation.addedNodes.forEach((node: Node) => {
@@ -35,7 +50,8 @@ function observeTweets(): void {
             const element = node as Element;
             const tweetElement: Element | null = element.querySelector('[data-testid="tweet"]');
             if (tweetElement) {
-              saveTweet(tweetElement);
+              // Observe the tweet element with the Intersection Observer
+              observer.observe(tweetElement);
             }
           }
         });
@@ -43,7 +59,7 @@ function observeTweets(): void {
     });
   });
 
-  observer.observe(document.body, { childList: true, subtree: true });
+  mutationObserver.observe(document.body, { childList: true, subtree: true });
 }
 
 observeTweets();

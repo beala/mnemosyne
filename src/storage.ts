@@ -8,7 +8,7 @@ type Impression = {
 export function createDb(): Promise<IDBDatabase> {
 
     return new Promise<IDBDatabase>((resolve, reject) => {
-        const request = indexedDB.open("TweetDatabase", 3);
+        const request = indexedDB.open("TweetDatabase", 4);
         request.onupgradeneeded = (event) => {
             const db = (event.target as IDBOpenDBRequest).result;
             if (db.objectStoreNames.contains("tweets")) {
@@ -82,7 +82,7 @@ export async function saveTweetToIndexedDB(db: IDBDatabase, tweet: Tweet, viewDa
     return Promise.all([requestToPromise(tweetRequest), requestToPromise(impressionRequest)]).then(() => { });
 }
 
-export function getViewsInRange(db: IDBDatabase, start: Date, end: Date): Promise<Tweet[]> {
+export function getViewsInRange(db: IDBDatabase, start: Date, end: Date): Promise<[Date, Tweet][]> {
     const transaction = db.transaction(["impressions"], "readonly");
     const impressionsObjectStore = transaction.objectStore("impressions");
 
@@ -92,13 +92,13 @@ export function getViewsInRange(db: IDBDatabase, start: Date, end: Date): Promis
     return new Promise((resolve, reject) => {
         request.onsuccess = () => {
             const tweetIds = request.result;
-            const tweetRequests: IDBRequest<Tweet>[] = tweetIds.map((impression) => {
+            const tweetRequests: Promise<[Date, Tweet]>[] = tweetIds.map((impression) => {
                 const tweetTransaction = db.transaction(["tweets"], "readonly");
                 const tweetObjectStore = tweetTransaction.objectStore("tweets");
-                return tweetObjectStore.get(impression.tweetId);
+                return requestToPromise(tweetObjectStore.get(impression.tweetId)).then(t => [impression.timestamp, t]);
             });
 
-            allRequestsToPromises(tweetRequests)
+            Promise.all(tweetRequests)
                 .then(tweets => tweets.reverse())
                 .then(resolve)
                 .catch(reject);
