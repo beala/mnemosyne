@@ -1,5 +1,5 @@
 {
-  "name": "tweet-mem",
+  "name": "mnemosyne",
   "version": "1.0.0",
   "description": "Remember which tweets you've seen on X/Twitter.",
   "main": "index.js",
