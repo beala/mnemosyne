@@ -27,7 +27,9 @@ jobs:
         run: npm run build
 
       - name: Package extension
-        run: zip -r mnemosyne.zip dist
+        run: |
+          mv dist mnemosyne
+          zip -r mnemosyne.zip mnemosyne
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
