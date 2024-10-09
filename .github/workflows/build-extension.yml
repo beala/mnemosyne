@@ -27,11 +27,11 @@ jobs:
         run: npm run build
 
       - name: Package extension
-        run: zip -r chrome-extension.zip dist
+        run: zip -r mnemosyne.zip dist
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: chrome-extension.zip
+          files: mnemosyne.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
