@@ -1,4 +1,4 @@
-<img src="static/for_distinguished_member.png" alt="Withered wojak can't find the tweet" width="500" />
+<img src="static/for_distinguished_member.png" alt="Withered wojak can't find the tweet"/>
 
 # Mnemosyne
 
