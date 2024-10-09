@@ -2,6 +2,15 @@
 
 Mnemosyne (neh-moss-eh-knee) is a browser extension that helps you remember and find tweets you've seen. Every tweet you view is saved and searchable. Simply install it, browser X/Twitter, and click the Mnemosyne icon in the toolbar to search your viewed tweets.
 
+To access your viewed tweets, click the Mnemosyne icon in the toolbar.
+
+![Extension icon in toolbar](static/toolbar.png)
+
+And you can search your viewed tweets:
+
+![Mnemosyne search page](static/query.png)
+
+
 ## Installation
 
 This has not been published to the Chrome Web Store yet. 
