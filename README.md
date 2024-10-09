@@ -4,12 +4,11 @@ Mnemosyne (neh-moss-eh-knee) is a browser extension that helps you remember and 
 
 To access your viewed tweets, click the Mnemosyne icon in the toolbar.
 
-![Extension icon in toolbar](static/toolbar.png)
+<img src="static/toolbar.png" alt="Extension icon in toolbar" width="300" />
 
 And you can search your viewed tweets:
 
-![Mnemosyne search page](static/query.png)
-
+<img src="static/query.png" alt="Search page" width="500" />
 
 ## Installation
 
