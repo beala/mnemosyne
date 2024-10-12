@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { Tweet } from "./extract";
 import { createDb, getViewsInRange } from "./storage";
 import './styles/main.css';
-import FuzzySearch from 'fuzzy-search';
+import lunr from 'lunr';
 
 function formatDate(date: Date): string {
 
@@ -51,10 +51,11 @@ enum SearchRange {
 }
 
 const Timeline = () => {
-    const [searcher, setSearcher] = useState<FuzzySearch<{impressionDate: Date, tweet: Tweet}> | null>(null)
+    const [tweets, setTweets] = useState<Map<string, { impressionDate: Date, tweet: Tweet }>>(new Map())
+    const [searcher, setSearcher] = useState<lunr.Index | null>(null)
     const [searchTerm, setSearchTerm] = useState<string>('')
-    const [displayedTweets, setDisplayedTweets] = useState<{impressionDate: Date, tweet: Tweet}[]>([])
-    
+    const [displayedTweets, setDisplayedTweets] = useState<{ impressionDate: Date, tweet: Tweet }[]>([])
+
     const [searchRange, setSearchRange] = useState<SearchRange>(SearchRange.LAST_15_MINUTES)
     const [startTime, setStartTime] = useState<Date>(new Date(new Date().getTime() - 15 * 60 * 1000))
     const [endTime, setEndTime] = useState<Date>(new Date())
@@ -63,16 +64,33 @@ const Timeline = () => {
         console.log("Creating db")
         createDb().then(newDb => {
             console.time('getViewsInRange');
-            getViewsInRange(newDb, startTime, endTime).then(tweets => {
-                const tweetsWithImpressionDate = tweets.map(([impressionDate, tweet]) => ({impressionDate, tweet}));
+            getViewsInRange(newDb, startTime, endTime).then(impressions => {
+                const tweetsWithImpressionDate = impressions.map(([impressionDate, tweet]) => ({ impressionDate, tweet }));
 
-                console.time('FuzzySearch creation');
-                const newSearcher = new FuzzySearch(tweetsWithImpressionDate, ['tweet.text', 'tweet.author', 'tweet.displayName', 'tweet.qt.text', 'tweet.qt.author', 'tweet.qt.displayName'], {sort: true});
-                console.timeEnd('FuzzySearch creation');
-                console.log(`Created FuzzySearch with ${tweetsWithImpressionDate.length} tweets`);
-                
+                const newTweetsMap = new Map(tweetsWithImpressionDate.map(tweet => [tweet.tweet.id, tweet]))
+                setTweets(newTweetsMap)
+                console.time('Search index creation');
+                const newSearcher = lunr(function () {
+                    this.ref('id')
+                    this.field('text')
+                    this.field('author')
+                    this.field('displayName')
+                    this.field('qt.text')
+                    this.field('qt.author')
+                    this.field('qt.displayName')
+
+                    tweetsWithImpressionDate.forEach((tweet) => {
+                        this.add(tweet.tweet)
+                    })
+                })
+                // const newSearcher = new FuzzySearch(tweetsWithImpressionDate, ['tweet.text', 'tweet.author', 'tweet.displayName', 'tweet.qt.text', 'tweet.qt.author', 'tweet.qt.displayName'], { sort: true });
+                console.timeEnd('Search index creation');
+                console.log(`Created Search index with ${tweetsWithImpressionDate.length} tweets`);
+
                 setSearcher(newSearcher)
-                setDisplayedTweets(newSearcher.search(searchTerm))
+                setDisplayedTweets(newSearcher.search(searchTerm).map(result => {
+                    return newTweetsMap.get(result.ref)!;
+                }))
             })
             console.timeEnd('getViewsInRange');
         });
@@ -93,7 +111,7 @@ const Timeline = () => {
         const debounced = debounce((term: string) => {
             setSearchTerm(term)
             console.time('FuzzySearch search');
-            setDisplayedTweets(searcher?.search(term) ?? []);
+            setDisplayedTweets(searcher?.search(term).map(result => tweets.get(result.ref)!) ?? []);
             console.timeEnd('FuzzySearch search');
         }, 750);
         return (e: React.ChangeEvent<HTMLInputElement>) => {

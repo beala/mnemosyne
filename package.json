@@ -12,16 +12,16 @@
   },
   "author": "Alex Beal",
   "dependencies": {
-    "fuzzy-search": "^3.2.1",
     "jsdom": "^25.0.1",
+    "lunr": "^2.3.9",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@types/chrome": "0.0.158",
-    "@types/fuzzy-search": "^2.1.5",
     "@types/jest": "^29.5.0",
     "@types/jsdom": "^21.1.7",
+    "@types/lunr": "^2.3.7",
     "@types/react": "^18.0.29",
     "@types/react-dom": "^18.0.11",
     "autoprefixer": "^10.4.20",
