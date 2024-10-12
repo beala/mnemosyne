@@ -1,8 +1,9 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { createRoot } from "react-dom/client";
 import { Tweet } from "./extract";
 import { createDb, getViewsInRange } from "./storage";
 import './styles/main.css';
+import FuzzySearch from 'fuzzy-search';
 
 function formatDate(date: Date): string {
 
@@ -42,43 +43,43 @@ function formatImpression(impressionTime: Date): string {
     }
 }
 
+enum SearchRange {
+    LAST_15_MINUTES = "15min",
+    LAST_24_HOURS = "1day",
+    LAST_7_DAYS = "1week",
+    ALL_TIME = "all"
+}
+
 const Timeline = () => {
-    const [tweets, setTweets] = useState<[Date, Tweet][]>([])
-    const [startTime, setStartTime] = useState<Date>(new Date(new Date().getTime() - 15 * 60 * 1000))
+    const [searcher, setSearcher] = useState<FuzzySearch<{impressionDate: Date, tweet: Tweet}> | null>(null)
     const [searchTerm, setSearchTerm] = useState<string>('')
-    const [db, setDb] = useState<IDBDatabase | null>(null)
+    const [displayedTweets, setDisplayedTweets] = useState<{impressionDate: Date, tweet: Tweet}[]>([])
+    
+    const [searchRange, setSearchRange] = useState<SearchRange>(SearchRange.LAST_15_MINUTES)
+    const [startTime, setStartTime] = useState<Date>(new Date(new Date().getTime() - 15 * 60 * 1000))
+    const [endTime, setEndTime] = useState<Date>(new Date())
 
     useEffect(() => {
+        console.log("Creating db")
         createDb().then(newDb => {
-            setDb(newDb);
-        });
-    }, []);
+            console.time('getViewsInRange');
+            getViewsInRange(newDb, startTime, endTime).then(tweets => {
+                const tweetsWithImpressionDate = tweets.map(([impressionDate, tweet]) => ({impressionDate, tweet}));
 
-    const getTweets = useCallback(async (startDate: Date, endDate: Date, searchTerm: string): Promise<[Date, Tweet][]> => {
-        if (!db) return [];
-        return getViewsInRange(db, startDate, endDate).then(views => {
-            return views.filter(([impressionDate, tweet]) => tweet.text.toLowerCase().includes(searchTerm) ||
-                tweet.author.toLowerCase().includes(searchTerm) ||
-                tweet.displayName.toLowerCase().includes(searchTerm) ||
-                (tweet.qt && (
-                    tweet.qt.text.toLowerCase().includes(searchTerm) ||
-                    tweet.qt.author.toLowerCase().includes(searchTerm) ||
-                    tweet.qt.displayName.toLowerCase().includes(searchTerm)
-                ))
-            );
-        });
-    }, [db]);
-
-    useEffect(() => {
-        if (db) {
-            getTweets(new Date(new Date().getTime() - 15 * 60 * 1000), new Date(), searchTerm).then(tweets => {
-                setTweets(tweets)
+                console.time('FuzzySearch creation');
+                const newSearcher = new FuzzySearch(tweetsWithImpressionDate, ['tweet.text', 'tweet.author', 'tweet.displayName', 'tweet.qt.text', 'tweet.qt.author', 'tweet.qt.displayName'], {sort: true});
+                console.timeEnd('FuzzySearch creation');
+                console.log(`Created FuzzySearch with ${tweetsWithImpressionDate.length} tweets`);
+                
+                setSearcher(newSearcher)
+                setDisplayedTweets(newSearcher.search(searchTerm))
             })
-        }
-    }, [db, getTweets])
+            console.timeEnd('getViewsInRange');
+        });
+    }, [startTime, endTime]);
 
     function exportTweets() {
-        const jsonData = JSON.stringify(tweets, null, 2);
+        const jsonData = JSON.stringify(displayedTweets, null, 2);
         const blob = new Blob([jsonData], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -88,6 +89,39 @@ const Timeline = () => {
         link.click();
     }
 
+    const debouncedSearch = useMemo(() => {
+        const debounced = debounce((term: string) => {
+            setSearchTerm(term)
+            console.time('FuzzySearch search');
+            setDisplayedTweets(searcher?.search(term) ?? []);
+            console.timeEnd('FuzzySearch search');
+        }, 750);
+        return (e: React.ChangeEvent<HTMLInputElement>) => {
+            const newSearchTerm = e.target.value.toLowerCase();
+            debounced(newSearchTerm);
+        };
+    }, [searcher]);
+
+    function updateSearchRange(range: SearchRange) {
+        let now = new Date();
+        let startTime;
+        switch (range) {
+            case SearchRange.LAST_15_MINUTES:
+                startTime = new Date(now.getTime() - 15 * 60 * 1000);
+                break;
+            case SearchRange.LAST_24_HOURS:
+                startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+                break;
+            case SearchRange.LAST_7_DAYS:
+                startTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                break;
+            case SearchRange.ALL_TIME:
+                startTime = new Date(0);
+        }
+        setStartTime(startTime);
+        setEndTime(now);
+    }
+
     return (
         <div className="max-w-[700px] mx-auto">
             <div className="m-2 mx-auto">
@@ -95,18 +129,7 @@ const Timeline = () => {
                     type="text"
                     placeholder="Search tweets..."
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    onChange={(e) => {
-                        const newSearchTerm = e.target.value.toLowerCase();
-                        setSearchTerm(newSearchTerm);
-
-                        const timeoutId = setTimeout(() => {
-                            getTweets(startTime, new Date(), newSearchTerm).then(tweets => {
-                                setTweets(tweets);
-                            });
-                        }, 1000);
-
-                        return () => clearTimeout(timeoutId);
-                    }}
+                    onChange={debouncedSearch}
                 />
             </div>
             <div className="m-2 mx-auto">
@@ -114,28 +137,24 @@ const Timeline = () => {
                     <select
                         className="flex-grow px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mr-2"
                         onChange={(e) => {
-                            const now = new Date();
-                            let startDate;
                             switch (e.target.value) {
                                 case '15min':
-                                    startDate = new Date(now.getTime() - 15 * 60 * 1000);
-                                    setStartTime(startDate);
+                                    updateSearchRange(SearchRange.LAST_15_MINUTES);
+                                    setSearchRange(SearchRange.LAST_15_MINUTES);
                                     break;
                                 case '1day':
-                                    startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-                                    setStartTime(startDate);
+                                    updateSearchRange(SearchRange.LAST_24_HOURS);
+                                    setSearchRange(SearchRange.LAST_24_HOURS);
                                     break;
                                 case '1week':
-                                    startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                                    setStartTime(startDate);
+                                    updateSearchRange(SearchRange.LAST_7_DAYS);
+                                    setSearchRange(SearchRange.LAST_7_DAYS);
                                     break;
-                                default:
-                                    startDate = new Date(0); // Beginning of time for 'all'
-                                    setStartTime(startDate);
+                                case 'all':
+                                    updateSearchRange(SearchRange.ALL_TIME);
+                                    setSearchRange(SearchRange.ALL_TIME);
+                                    break;
                             }
-                            getTweets(startDate, now, searchTerm).then(filteredTweets => {
-                                setTweets(filteredTweets);
-                            });
                         }}
                     >
                         <option value="15min">Last 15 minutes</option>
@@ -148,10 +167,7 @@ const Timeline = () => {
                     <button
                         className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         onClick={() => {
-                            const now = new Date();
-                            getTweets(startTime, now, searchTerm).then(filteredTweets => {
-                                setTweets(filteredTweets);
-                            });
+                            updateSearchRange(searchRange)
                         }}
                     >
                         Refresh
@@ -166,33 +182,39 @@ const Timeline = () => {
             </div>
             <div className="max-w-[700px] mx-auto text-base">
                 <ul>
-                    {tweets.map(tweetImpression => {
-                        const [impressionTime, tweet] = tweetImpression
-                        return (
-                            <li className="mb-5 border-gray-200 pb-3 list-none" key={`${tweet.id}-${impressionTime.getTime()}`}>
-                                <div onClick={() => window.open(`https://twitter.com/${tweet.author}/status/${tweet.id}`, '_blank')} className="cursor-pointer hover:bg-blue-50">
-                                    <div className="font-bold">{tweet.displayName} (@{tweet.author}) <span className="text-gray-500 text-sm font-normal">{formatDate(new Date(tweet.datetime))}</span></div>
-                                    <div>{tweet.text}</div>
-                                    {tweet.cardUrl && <div>🔗 <a href={tweet.cardUrl} target="_blank" className="text-blue-500 hover:text-blue-600">{tweet.cardUrl}</a></div>}
-                                    {tweet.imageUrls.length > 0 && <div>📷</div>}
-                                    {tweet.qt && (
-                                        <div className="mt-3 p-3 bg-gray-50 rounded">
-                                            <div className="font-bold">{tweet.qt.displayName} (@{tweet.qt.author})</div>
-                                            <div>{tweet.qt.text}</div>
-                                            {tweet.qt.imageUrls.length > 0 && <div>📷</div>}
-                                            <div className="text-gray-500">Posted {formatDate(new Date(tweet.qt.datetime))}</div>
-                                        </div>
-                                    )}
-                                    <div className="text-gray-500 text-sm">Viewed {formatImpression(impressionTime)}</div>
-                                </div>
-                            </li>
-                        )
-                    })}
+                    {displayedTweets.map(({ impressionDate, tweet }) => (
+                        <li className="mb-5 border-gray-200 pb-3 list-none" key={`${tweet.id}-${impressionDate.getTime()}`}>
+                            <div onClick={() => window.open(`https://twitter.com/${tweet.author}/status/${tweet.id}`, '_blank')} className="cursor-pointer hover:bg-blue-50">
+                                <div className="font-bold">{tweet.displayName} (@{tweet.author}) <span className="text-gray-500 text-sm font-normal">{formatDate(new Date(tweet.datetime))}</span></div>
+                                <div>{tweet.text}</div>
+                                {tweet.cardUrl && <div>🔗 <a href={tweet.cardUrl} target="_blank" className="text-blue-500 hover:text-blue-600">{tweet.cardUrl}</a></div>}
+                                {tweet.imageUrls.length > 0 && <div>📷</div>}
+                                {tweet.qt && (
+                                    <div className="mt-3 p-3 bg-gray-50 rounded">
+                                        <div className="font-bold">{tweet.qt.displayName} (@{tweet.qt.author})</div>
+                                        <div>{tweet.qt.text}</div>
+                                        {tweet.qt.imageUrls.length > 0 && <div>📷</div>}
+                                        <div className="text-gray-500">Posted {formatDate(new Date(tweet.qt.datetime))}</div>
+                                    </div>
+                                )}
+                                <div className="text-gray-500 text-sm">Viewed {formatImpression(impressionDate)}</div>
+                            </div>
+                        </li>
+                    ))}
                 </ul>
             </div>
         </div>
     );
 };
+
+// Debounce utility function
+function debounce<F extends (...args: any[]) => any>(func: F, delay: number): F {
+    let timeoutId: ReturnType<typeof setTimeout>;
+    return function (this: any, ...args: Parameters<F>) {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => func.apply(this, args), delay);
+    } as F;
+}
 
 const root = createRoot(document.getElementById("root")!);
 
