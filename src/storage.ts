@@ -1,5 +1,4 @@
 import { Tweet } from "./extract";
-import { DAYS_TO_KEEP_DEFAULT } from "./constants";
 
 type Impression = {
     tweetId: string;
@@ -9,7 +8,7 @@ type Impression = {
 export function createDb(): Promise<IDBDatabase> {
 
     return new Promise<IDBDatabase>((resolve, reject) => {
-        const request = indexedDB.open("TweetDatabase", 4);
+        const request = indexedDB.open("TweetDatabase", 5);
         request.onupgradeneeded = (event) => {
             const db = (event.target as IDBOpenDBRequest).result;
 
@@ -22,6 +21,11 @@ export function createDb(): Promise<IDBDatabase> {
                 const impressionsStore = db.createObjectStore("impressions", { autoIncrement: true });
                 impressionsStore.createIndex("timestamp", "timestamp", { unique: false });
                 console.log("Impressions store created");
+            }
+
+            if (event.oldVersion < 5) {
+                console.log("Adding tweetId index to impressions store");
+                request.transaction?.objectStore("impressions").createIndex("tweetId", "tweetId", { unique: false });
             }
         };
         request.onsuccess = (event) => {
@@ -60,58 +64,70 @@ export async function saveTweetToIndexedDB(db: IDBDatabase, tweet: Tweet, viewDa
     };
 
     // Count the number of tweets in the database
-    const countTransaction = db.transaction(["tweets"], "readonly");
-    const countObjectStore = countTransaction.objectStore("tweets");
-    const countRequest = countObjectStore.count();
+    // const countTransaction = db.transaction(["tweets"], "readonly");
+    // const countObjectStore = countTransaction.objectStore("tweets");
+    // const countRequest = countObjectStore.count();
 
-    countRequest.onsuccess = () => {
-        console.log(`Total number of tweets in the database: ${countRequest.result}`);
-    };
+    // countRequest.onsuccess = () => {
+    //     console.log(`Total number of tweets in the database: ${countRequest.result}`);
+    // };
 
-    countRequest.onerror = (event) => {
-        console.error("Error counting tweets:", event);
-    };
+    // countRequest.onerror = (event) => {
+    //     console.error("Error counting tweets:", event);
+    // };
 
-    chrome.storage.sync.get("daysToKeep", (result) => {
-        const daysToKeep = result.daysToKeep || DAYS_TO_KEEP_DEFAULT;
-        console.log(`Purging tweets older than ${daysToKeep} days`);
-        purgeTweetsOlderThan(db, new Date(Date.now() - daysToKeep * 24 * 60 * 60 * 1000));
+    return new Promise((resolve, reject) => {
+        transaction.oncomplete = () => {
+            resolve();
+        }
+        transaction.onerror = (event) => {
+            reject(event);
+        }
     });
-
-    return Promise.all([requestToPromise(tweetRequest), requestToPromise(impressionRequest)]).then(() => { });
 }
 
-export function purgeTweetsOlderThan(db: IDBDatabase, date: Date) {
-    const transaction = db.transaction(["impressions", "tweets"], "readwrite");
-    const impressionsObjectStore = transaction.objectStore("impressions");
-    const tweetsObjectStore = transaction.objectStore("tweets");
+export async function purgeTweetsOlderThan(db: IDBDatabase, date: Date): Promise<void> {
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(["impressions", "tweets"], "readwrite");
+        const impressionsObjectStore = transaction.objectStore("impressions");
+        const tweetsObjectStore = transaction.objectStore("tweets");
 
-    const range = IDBKeyRange.upperBound(date);
-    const impressionsKeysRequest: IDBRequest<IDBValidKey[]> = impressionsObjectStore.index("timestamp").getAllKeys(range);
+        const range = IDBKeyRange.upperBound(date);
+        const impressionsKeysRequest: IDBRequest<IDBValidKey[]> = impressionsObjectStore.index("timestamp").getAllKeys(range);
 
-    impressionsKeysRequest.onsuccess = () => {
-        const impressionKeysToDelete = impressionsKeysRequest.result.map((key) => key as string);
-        console.log(`Deleting ${impressionKeysToDelete.length} impressions`);
-        impressionKeysToDelete.forEach((impressionKey) => {
-            const impressionRequest: IDBRequest<Impression> = impressionsObjectStore.get(impressionKey);
-            impressionRequest.onsuccess = () => {
-                if (impressionRequest.result) {
-                    impressionsObjectStore.delete(impressionKey);
-                    const tweetDeleteRequest = tweetsObjectStore.delete(impressionRequest.result.tweetId);
-                    tweetDeleteRequest.onsuccess = () => {
-                        console.log(`Tweet ${impressionRequest.result.tweetId} deleted`);
+        impressionsKeysRequest.onsuccess = () => {
+            const impressionKeysToDelete = impressionsKeysRequest.result.map((key) => key as string);
+            console.log(`Deleting ${impressionKeysToDelete.length} impressions`);
+            impressionKeysToDelete.forEach((impressionKey) => {
+                const impressionRequest: IDBRequest<Impression> = impressionsObjectStore.get(impressionKey);
+                impressionRequest.onsuccess = () => {
+                    if (impressionRequest.result) {
+                        // Make sure there are no other impressions that are referencing the same tweet.
+                        const otherImpressions: IDBRequest<Impression[]> = impressionsObjectStore.index("tweetId").getAll(impressionRequest.result.tweetId);
+                        otherImpressions.onsuccess = () => {
+                            // console.log(`Other impressions: ${JSON.stringify(otherImpressions.result)}`);
+                            if (otherImpressions.result.every(i => i.timestamp.getTime() < date.getTime())) {
+                                const tweetDeleteRequest = tweetsObjectStore.delete(impressionRequest.result.tweetId);
+                                tweetDeleteRequest.onsuccess = () => {
+                                    console.log(`Tweet ${impressionRequest.result.tweetId} deleted`);
+                                }
+                            }
+                            impressionsObjectStore.delete(impressionKey);
+                        }
                     }
                 }
-            }
-        });
-    }
+            });
+        }
 
-    transaction.oncomplete = () => {
-        console.log("Purge completed");
-    }
-    transaction.onerror = (event) => {
-        console.error("Error purging tweets:", JSON.stringify(event));
-    }
+        transaction.oncomplete = () => {
+            console.log("Purge completed");
+            resolve();
+        }
+        transaction.onerror = (event) => {
+            console.error("Error purging tweets:", JSON.stringify(event));
+            reject(event);
+        }
+    });
 }
 
 export function getViewsInRange(db: IDBDatabase, start: Date, end: Date): Promise<[Date, Tweet][]> {

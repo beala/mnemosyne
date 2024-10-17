@@ -1,6 +1,7 @@
+import { DAYS_TO_KEEP_DEFAULT } from './constants';
 import { Tweet } from './extract';
 import { PriorityQueue } from './priorityq';
-import { createDb, saveTweetToIndexedDB } from './storage';
+import { createDb, purgeTweetsOlderThan, saveTweetToIndexedDB } from './storage';
 
 const deduplicator = new PriorityQueue<string>();
 
@@ -30,6 +31,11 @@ createDb().then((db) => {
           const impressionTime = new Date();
           deduplicator.enqueue(tweet.id, -impressionTime.getTime());
           await saveTweetToIndexedDB(db, tweet, impressionTime);
+          chrome.storage.sync.get("daysToKeep", (result) => {
+            const daysToKeep = result.daysToKeep || DAYS_TO_KEEP_DEFAULT;
+            console.log(`Purging tweets older than ${daysToKeep} days`);
+            purgeTweetsOlderThan(db, new Date(Date.now() - daysToKeep * 24 * 60 * 60 * 1000));
+          });
         } else {
           console.log(`Tweet ${tweet.id} was already saved less than 60 seconds ago. Skipping.`);
         }
