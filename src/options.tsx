@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import './styles/main.css';
+import { DAYS_TO_KEEP_DEFAULT } from "./constants";
 
-export const DAYS_TO_KEEP_DEFAULT = 365;
 
 const Options = () => {
     const [daysToKeep, setDaysToKeep] = useState<number | undefined>(undefined);

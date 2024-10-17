@@ -47,6 +47,7 @@ enum SearchRange {
     LAST_15_MINUTES = "15min",
     LAST_24_HOURS = "1day",
     LAST_7_DAYS = "1week",
+    LAST_30_DAYS = "30days",
     ALL_TIME = "all"
 }
 
@@ -67,9 +68,8 @@ const Timeline = () => {
             getViewsInRange(newDb, startTime, endTime).then(impressions => {
                 const tweetsWithImpressionDate = impressions.map(([impressionDate, tweet]) => ({ impressionDate, tweet }));
 
-                const newTweetsMap = new Map(tweetsWithImpressionDate
-                    .filter(tweet => tweet.tweet !== undefined)
-                    .map(tweet => [tweet.tweet.id, tweet]))
+                const definedTweets = tweetsWithImpressionDate.filter(tweet => tweet.tweet !== undefined)
+                const newTweetsMap = new Map(definedTweets.map(tweet => [tweet.tweet.id, tweet]))
                 setTweets(newTweetsMap)
                 console.time('Search index creation');
                 const newSearcher = lunr(function () {
@@ -81,7 +81,7 @@ const Timeline = () => {
                     this.field('qt.author')
                     this.field('qt.displayName')
 
-                    tweetsWithImpressionDate.forEach((tweet) => {
+                    definedTweets.forEach((tweet) => {
                         this.add(tweet.tweet)
                     })
                 })
@@ -135,6 +135,9 @@ const Timeline = () => {
             case SearchRange.LAST_7_DAYS:
                 startTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
                 break;
+            case SearchRange.LAST_30_DAYS:
+                startTime = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                break;
             case SearchRange.ALL_TIME:
                 startTime = new Date(0);
         }
@@ -170,6 +173,10 @@ const Timeline = () => {
                                     updateSearchRange(SearchRange.LAST_7_DAYS);
                                     setSearchRange(SearchRange.LAST_7_DAYS);
                                     break;
+                                case '30days':
+                                    updateSearchRange(SearchRange.LAST_30_DAYS);
+                                    setSearchRange(SearchRange.LAST_30_DAYS);
+                                    break;
                                 case 'all':
                                     updateSearchRange(SearchRange.ALL_TIME);
                                     setSearchRange(SearchRange.ALL_TIME);
@@ -180,6 +187,7 @@ const Timeline = () => {
                         <option value="15min">Last 15 minutes</option>
                         <option value="1day">Last 24 hours</option>
                         <option value="1week">Last 7 days</option>
+                        <option value="30days">Last 30 days</option>
                         <option value="all">All time</option>
                     </select>
                 </div>

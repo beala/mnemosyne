@@ -1,5 +1,5 @@
 import { Tweet } from "./extract";
-import { DAYS_TO_KEEP_DEFAULT } from "./options";
+import { DAYS_TO_KEEP_DEFAULT } from "./constants";
 
 type Impression = {
     tweetId: string;
