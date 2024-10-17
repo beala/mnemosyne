@@ -67,7 +67,9 @@ const Timeline = () => {
             getViewsInRange(newDb, startTime, endTime).then(impressions => {
                 const tweetsWithImpressionDate = impressions.map(([impressionDate, tweet]) => ({ impressionDate, tweet }));
 
-                const newTweetsMap = new Map(tweetsWithImpressionDate.map(tweet => [tweet.tweet.id, tweet]))
+                const newTweetsMap = new Map(tweetsWithImpressionDate
+                    .filter(tweet => tweet.tweet !== undefined)
+                    .map(tweet => [tweet.tweet.id, tweet]))
                 setTweets(newTweetsMap)
                 console.time('Search index creation');
                 const newSearcher = lunr(function () {
