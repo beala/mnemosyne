@@ -11,14 +11,6 @@ export function createDb(): Promise<IDBDatabase> {
         const request = indexedDB.open("TweetDatabase", 4);
         request.onupgradeneeded = (event) => {
             const db = (event.target as IDBOpenDBRequest).result;
-            if (db.objectStoreNames.contains("tweets")) {
-                db.deleteObjectStore("tweets");
-                console.log("Tweets store deleted");
-            }
-            if (db.objectStoreNames.contains("impressions")) {
-                db.deleteObjectStore("impressions");
-                console.log("Impressions store deleted");
-            }
 
             if (!db.objectStoreNames.contains("tweets")) {
                 db.createObjectStore("tweets", { keyPath: "id" });
