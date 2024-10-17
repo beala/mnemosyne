@@ -1,14 +1,14 @@
-<img src="static/for_distinguished_member.png" alt="Withered wojak can't find the tweet" width="500" />
+<img src="static/for_distinguished_member.png" alt="Withered wojak can't find the tweet"/>
 
 # Mnemosyne
 
-Mnemosyne (neh-moss-eh-knee) is a browser extension that helps you remember and find tweets you've seen. Every tweet you view is saved and searchable. Simply install it, browser X/Twitter, and click the Mnemosyne icon in the toolbar to search your viewed tweets.
+Mnemosyne (neh-moss-eh-knee) is a browser extension that helps you remember and find tweets you've seen. Every tweet you view is saved and searchable. 
 
-To access your viewed tweets, click the Mnemosyne icon in the toolbar.
+Install it, browse X/Twitter, and click the Mnemosyne icon in the toolbar (pictured below) to search your viewed tweets.
 
 <img src="static/toolbar.png" alt="Extension icon in toolbar" width="300" />
 
-And you can search your viewed tweets:
+Ah I found the tweet 💆‍♂️
 
 <img src="static/query.png" alt="Search page" width="500" />
 
@@ -20,7 +20,7 @@ Until then, you can load it into Chrome manually.
 
 ### Option 1: Download the latest release
 
-1. Download the latest release from the [Releases](https://github.com/alexbeal/mnemosyne/releases) page.
+1. Download the latest release from the [Releases](https://github.com/beala/mnemosyne/releases) page.
 2. Unzip the file.
 3. Open Chrome (or any Chromium based browser) and navigate to `chrome://extensions`.
 4. Enable "Developer mode" in the top right corner.
