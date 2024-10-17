@@ -79,7 +79,46 @@ export async function saveTweetToIndexedDB(db: IDBDatabase, tweet: Tweet, viewDa
         console.error("Error counting tweets:", event);
     };
 
+    chrome.storage.sync.get("daysToKeep", (result) => {
+        const daysToKeep = result.daysToKeep || 30;
+        console.log(`Purging tweets older than ${daysToKeep} days`);
+        purgeTweetsOlderThan(db, new Date(Date.now() - daysToKeep * 24 * 60 * 60 * 1000));
+    });
+
     return Promise.all([requestToPromise(tweetRequest), requestToPromise(impressionRequest)]).then(() => { });
+}
+
+export function purgeTweetsOlderThan(db: IDBDatabase, date: Date) {
+    const transaction = db.transaction(["impressions", "tweets"], "readwrite");
+    const impressionsObjectStore = transaction.objectStore("impressions");
+    const tweetsObjectStore = transaction.objectStore("tweets");
+
+    const range = IDBKeyRange.upperBound(date);
+    const impressionsKeysRequest: IDBRequest<IDBValidKey[]> = impressionsObjectStore.index("timestamp").getAllKeys(range);
+
+    impressionsKeysRequest.onsuccess = () => {
+        const impressionKeysToDelete = impressionsKeysRequest.result.map((key) => key as string);
+        console.log(`Deleting ${impressionKeysToDelete.length} impressions`);
+        impressionKeysToDelete.forEach((impressionKey) => {
+            const impressionRequest: IDBRequest<Impression> = impressionsObjectStore.get(impressionKey);
+            impressionRequest.onsuccess = () => {
+                if (impressionRequest.result) {
+                    impressionsObjectStore.delete(impressionKey);
+                    const tweetDeleteRequest = tweetsObjectStore.delete(impressionRequest.result.tweetId);
+                    tweetDeleteRequest.onsuccess = () => {
+                        console.log(`Tweet ${impressionRequest.result.tweetId} deleted`);
+                    }
+                }
+            }
+        });
+    }
+
+    transaction.oncomplete = () => {
+        console.log("Purge completed");
+    }
+    transaction.onerror = (event) => {
+        console.error("Error purging tweets:", JSON.stringify(event));
+    }
 }
 
 export function getViewsInRange(db: IDBDatabase, start: Date, end: Date): Promise<[Date, Tweet][]> {

@@ -80,6 +80,18 @@ export function extractTweet(tweetElement: Element): Tweet {
         }
     }
 
+    // Fallback for viewing tweets on their own page (when you click through).
+    if (tweetId.length === 0) {
+        const linkElement: HTMLAnchorElement | null = tweetElement.querySelector('a[href*="/status/"]');
+        if (linkElement) {
+            const href: string = linkElement.getAttribute('href') || "";
+            const parts: string[] = href.split('/');
+            const username: string = parts[1];
+            tweetId = parts[3] || "";
+            tweetAuthor = username ? `${username}` : "";
+        }
+    }
+
     return {
         id: tweetId,
         text: mainTweetText,
