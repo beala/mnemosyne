@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import './styles/main.css';
 
+export const DAYS_TO_KEEP_DEFAULT = 365;
 
 const Options = () => {
     const [daysToKeep, setDaysToKeep] = useState<number | undefined>(undefined);
@@ -10,7 +11,7 @@ const Options = () => {
     useEffect(() => {
         chrome.storage.sync.get("daysToKeep", (result) => {
             console.log(result);
-            setDaysToKeep(result.daysToKeep || 30);
+            setDaysToKeep(result.daysToKeep || DAYS_TO_KEEP_DEFAULT);
         });
     }, []);
 

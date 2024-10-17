@@ -1,4 +1,5 @@
 import { Tweet } from "./extract";
+import { DAYS_TO_KEEP_DEFAULT } from "./options";
 
 type Impression = {
     tweetId: string;
@@ -72,7 +73,7 @@ export async function saveTweetToIndexedDB(db: IDBDatabase, tweet: Tweet, viewDa
     };
 
     chrome.storage.sync.get("daysToKeep", (result) => {
-        const daysToKeep = result.daysToKeep || 30;
+        const daysToKeep = result.daysToKeep || DAYS_TO_KEEP_DEFAULT;
         console.log(`Purging tweets older than ${daysToKeep} days`);
         purgeTweetsOlderThan(db, new Date(Date.now() - daysToKeep * 24 * 60 * 60 * 1000));
     });
